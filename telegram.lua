@@ -1,36 +1,50 @@
-local arrPic = {}
--- Minumim
-arrPic[1] = {"type":"<type>", "media":"{attach://<pathToPic> | http://<picUrl>}", "caption":"Comment", "parse_mode":"{Markdown | HTML}"}
-arrPic[2] = {"type":"<type>", "media":"{attach://<pathToPic> | http://<picUrl>}", "caption":"Comment", "parse_mode":"{Markdown | HTML}"}
--- you can add up to 10
--- ALWAYS USE SEQUENTIAL STEPS... DO NOT JUMP FROM 2 to 5, 7 AND SO ON
--- arrPic[3] = {"type":"<type>", "media":"[attach://<pathToPic> | http://<picUrl>", "caption":"Comment", "parse_mode":"{Markdown | HTML}"}
--- etc. etc....
+local teleTok   = 'Enter your Bot Token here'
+local snapFile  = '/home/pi/domoticzSnap'
+local domoReq   = 'http://localhost:8080/camsnapshot.jpg?idx='
+local tgAb = {}
+tgAb['myName1']     = 222222222
+tgAb['myName2']     = 111111111
+tgAb['myGroup'] = -00000000
 
-telegram.sendMG(chat_id, arrPic)
+local telegram ={};
 
+    function telegram.getId(nome)
+        return tgAb[nome]
+    end
+    
+    function telegram.sendText(chatId, message)
+        return os.execute('curl --data chat_id='..chatId..' --data parse_mode=Markdown --data-urlencode "text='..message..'"  "https://api.telegram.org/bot'..teleTok..'/sendMessage" ')
+    end
 
-====== UNDER TELEGRAM FUNCTION LIBRARY
+    function telegram.sendImage(chatId, camChannel)
+        os.execute('wget -O "'..snapFile..camChannel..'.jpg" "'..domoReq..camChannel..'"')
+        return os.execute('curl -s -X POST "https://api.telegram.org/bot'..teleTok..'/sendPhoto?chat_id='..chatId..'" -F photo="@'..snapFile..camChannel..'.jpg"')
+    end
+
+    function telegram.sendDoc(chatId, filePath)
+        return os.execute('curl -s -X POST "https://api.telegram.org/bot'..teleTok..'/sendDocument?chat_id='..chatId..'" -F document="@'..filePath..'"')
+    end
 
     function telegram.sendMG(chatId, arrPic)
-		if type(arrPic) == 'table' then
-			local strMedia = ''
-			local strPics  = ''
-			
-			for idx = 1 to #arrPic 
-				if arrPic[idx]["media"].sub(1,9) = "attach://" then 	-- Local file
-					strPics = strPics..' -F '..arrPic[idx]["type"]..'_'..idx..'=@'..arrPic[idx]["media"].sub(10)
-					strMedia = steMedia..'{"type":"'..arrPic[idx]["type"]..'","media":"attach://'..arrPic[idx]["type"]..'_'..idx..'","caption":"'..arrPic[idx]["caption"]..'","parese_mode":"'..arrPic[idx]["parse_mode"]..'"}'
-				else
-					strMedia = steMedia..'{"type":"'..arrPic[idx]["type"]..'","media":"'..arrPic[idx]["media"]..'","caption":"'..arrPic[idx]["caption"]..'","parese_mode":"'..arrPic[idx]["parse_mode"]..'"}'
-				end 
-				if idx ~= #arrPic then 
-					steMedia = steMedia..','
-				end 
-			end for 
-		else
-			return false 
-		end 
-        return os.execute('curl -s -X POST "https://api.telegram.org/bot'..teleTok..'/sendMediaGroup?chat_id='..chatId..' '..strPics..' -F media="['..strMedia..']')
+-- Array to provide:
+-- local arrPic = {{'photo', 'attach:///home/pi/snap1.jpg', 'Test', 'Markdown'},{'photo', 'attach:///home/pi/temp/snap.jpg', 'Test', 'Markdown'}}
+        local strMedia = ''
+        local strPics = ''
+        if type(arrPic) == 'table' then
+            for idx = 1, #arrPic do
+                if arrPic[idx][2]:sub(1,9) == "attach://" then  -- Local file
+                    strPics = strPics..' -F '..arrPic[idx][1]..'_'..idx..'=@'..arrPic[idx][2]:sub(10)
+                    strMedia = strMedia..'{"type":"'..arrPic[idx][1]..'","media":"attach://'..arrPic[idx][1]..'_'..idx..'","caption":"'..arrPic[idx][3]..'","parse_mode":"'..arrPic[idx][4]..'"}'
+                else
+                    strMedia = strMedia..'{"type":"'..arrPic[idx][1]..'","media":"'..arrPic[idx][2]..'","caption":"'..arrPic[idx][3]..'","parse_mode":"'..arrPic[idx][4]..'"}'
+                end
+                if idx ~= #arrPic then
+                    strMedia = strMedia..','
+                end
+            end
+            return os.execute('curl -X POST https://api.telegram.org/bot'..teleTok..'/sendMediaGroup?chat_id='..chatId..' '..strPics..' -F media=\'['..strMedia..']\'')
+        end
     end
-	
+
+return telegram     
+ 
